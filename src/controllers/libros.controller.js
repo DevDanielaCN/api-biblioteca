@@ -11,7 +11,21 @@ function leerId(req) {
 
 function listar(req, res) {
   const lista = repo.listar({ q: req.query.q, categoria: req.query.categoria });
-  return exito(res, 200, 'Catálogo de libros', lista, { meta: { total: lista.length } });
+
+  // RETO 2 - Paginación opcional: si no llegan page ni limit, se devuelve todo (compatible con la app base)
+  if (req.query.page === undefined && req.query.limit === undefined) {
+    return exito(res, 200, 'Catálogo de libros', lista, { meta: { total: lista.length } });
+  }
+  const page = Number(req.query.page ?? 1);
+  const limit = Number(req.query.limit ?? 10);
+  if (!Number.isInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 50)
+    return error(res, 400, 'page debe ser un entero >= 1 y limit un entero entre 1 y 50');
+
+  const totalPages = Math.max(Math.ceil(lista.length / limit), 1);
+  const pagina = lista.slice((page - 1) * limit, page * limit);
+  return exito(res, 200, 'Catálogo de libros', pagina, {
+    meta: { total: lista.length, page, limit, totalPages }
+  });
 }
 
 function obtener(req, res) {
@@ -67,8 +81,27 @@ function eliminar(req, res) {
   return exito(res, 200, 'Libro eliminado del catálogo', libro);
 }
 
+// RETO 3 - Estadísticas del catálogo
+function estadisticas(req, res) {
+  const libros = repo.todos();
+  const totalEjemplares = libros.reduce((suma, l) => suma + l.ejemplares, 0);
+  const disponibles = libros.reduce((suma, l) => suma + l.disponibles, 0);
+
+  // Categoría con más títulos (si hay empate, la primera por orden alfabético)
+  const conteo = {};
+  for (const l of libros) conteo[l.categoria] = (conteo[l.categoria] || 0) + 1;
+  const top = Object.entries(conteo).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+
+  return exito(res, 200, 'Estadísticas del catálogo', {
+    totalLibros: libros.length,
+    totalEjemplares,
+    prestados: totalEjemplares - disponibles,
+    categoriaTop: top ? { categoria: top[0], libros: top[1] } : null
+  });
+}
+
 function categorias(req, res) {
   return exito(res, 200, 'Categorías disponibles', repo.categorias());
 }
 
-module.exports = { listar, obtener, crear, actualizar, prestar, devolver, eliminar, categorias };
+module.exports = { listar, obtener, crear, actualizar, prestar, devolver, eliminar, categorias, estadisticas };

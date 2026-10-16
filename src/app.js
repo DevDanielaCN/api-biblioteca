@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const librosRoutes = require('./routes/libros.routes');
 const { exito, error } = require('./utils/respuesta');
+const ctrl = require('./controllers/libros.controller');
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.get('/', (req, res) =>
 );
 
 app.use('/api/v1/libros', librosRoutes);
+app.get('/api/v1/estadisticas', ctrl.estadisticas);      // RETO 3
 
 // 404: ruta inexistente
 app.use((req, res) => error(res, 404, `Ruta no encontrada: ${req.method} ${req.originalUrl}`));

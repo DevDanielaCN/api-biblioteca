@@ -59,8 +59,12 @@ function eliminar(id) {
   return libros.splice(i, 1)[0];
 }
 
+function todos() {
+  return libros;
+}
+
 function categorias() {
   return [...new Set(libros.map(l => l.categoria))].sort();
 }
 
-module.exports = { listar, buscarPorId, existeIsbn, crear, actualizar, eliminar, categorias, reiniciar };
+module.exports = { listar, buscarPorId, existeIsbn, crear, actualizar, eliminar, categorias, todos, reiniciar };

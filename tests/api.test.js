@@ -121,3 +121,38 @@ test('Ruta inexistente devuelve 404 en JSON', async () => {
   assert.equal(r.status, 404);
   assert.equal(r.json.success, false);
 });
+
+// ---------- RETO 3 y 5: estadísticas ----------
+test('GET /api/v1/estadisticas devuelve los totales del catálogo inicial', async () => {
+  const r = await pedir('GET', '/api/v1/estadisticas');
+  assert.equal(r.status, 200);
+  assert.equal(r.json.data.totalLibros, 6);
+  assert.equal(r.json.data.totalEjemplares, 24);   // 5+4+6+3+2+4
+  assert.equal(r.json.data.prestados, 12);         // 24 - (3+4+1+0+2+2)
+  assert.deepEqual(r.json.data.categoriaTop, { categoria: 'Informática', libros: 2 });
+});
+
+test('Las estadísticas cambian tras un préstamo y un alta', async () => {
+  await pedir('PATCH', '/api/v1/libros/2/prestamo');                 // +1 prestado
+  await pedir('POST', '/api/v1/libros', libroNuevo);                 // +1 libro, +3 ejemplares
+  const r = await pedir('GET', '/api/v1/estadisticas');
+  assert.equal(r.json.data.totalLibros, 7);
+  assert.equal(r.json.data.totalEjemplares, 27);
+  assert.equal(r.json.data.prestados, 13);
+  assert.equal(r.json.data.categoriaTop.categoria, 'Informática');
+  assert.equal(r.json.data.categoriaTop.libros, 3);
+});
+
+// ---------- RETO 2: paginación ----------
+test('Paginación: page y limit devuelven meta completa', async () => {
+  const r = await pedir('GET', '/api/v1/libros?page=2&limit=4');
+  assert.equal(r.status, 200);
+  assert.equal(r.json.data.length, 2);
+  assert.deepEqual(r.json.meta, { total: 6, page: 2, limit: 4, totalPages: 2 });
+  assert.equal(r.json.data[0].id, 5);
+});
+
+test('Paginación: valores inválidos devuelven 400', async () => {
+  assert.equal((await pedir('GET', '/api/v1/libros?page=0&limit=4')).status, 400);
+  assert.equal((await pedir('GET', '/api/v1/libros?page=1&limit=500')).status, 400);
+});
